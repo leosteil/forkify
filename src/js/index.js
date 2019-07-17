@@ -1,17 +1,48 @@
-import axios from 'axios';
+import Search from './models/Search';
+import * as searchView from './views/searchView';
+import {elements, renderLoader, clearLoader} from './views/base';
 
+/** Global state of the app
+ * - Search object
+ * - Current recipe object 
+ * - Shopping list object
+ * - Liked recipes
+ **/
+const state = {};
 
-async function getResults(query){
+const controlSearch = async () => {
+	// 1) Get query from view
+	const query = searchView.getInput();
 
-	const key = '93db9d971dfc3cba53de3d000c19d2ca';
-	try{
-		const res = await axios(`https://www.food2fork.com/api/search?key=${key}&q=${query}`);
-		const recipes = res.data.recipes;
+	if(query) {
+		// 2) New search obj and add to state
+		state.search = new Search(query);
 
-		console.log(recipes);
-	}catch(error){
-		alert(error);
+		// 3) Prepare UI for results
+		searchView.clearInput();
+		searchView.clearResults();
+		renderLoader(elements.searchRes);
+
+		// 4) Search for recipes
+		await state.search.getResults();
+
+		// 5) Render results on UI
+		clearLoader();
+		searchView.renderResults(state.search.result);
 	}
-}
+};
 
-getResults('pizza');
+elements.searchForm.addEventListener('submit', e=>{
+	e.preventDefault();
+	controlSearch();
+});
+
+elements.searchResPages.addEventListener('click', e => {
+	const btn = e.target.closest('.btn-inline');
+
+	if(btn) {
+		const goToPage = parseInt(btn.dataset.goto, 10);
+		searchView.clearResults();
+		searchView.renderResults(state.search.result, goToPage);
+	}
+});
